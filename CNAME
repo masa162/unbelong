@@ -1,1 +1,1 @@
-unbelong.xyz
+echo "unbelong.xyz" > static/CNAME
