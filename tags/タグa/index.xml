@@ -1,11 +1,27 @@
 <?xml version="1.0" encoding="utf-8" standalone="yes"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
   <channel>
-    <title>タグA on recroom</title>
-    <link>http://localhost:1313/recroom/tags/%E3%82%BF%E3%82%B0a/</link>
-    <description>Recent content in タグA on recroom</description>
-    <generator>Hugo -- 0.147.3</generator>
+    <title>タグA on unbelong</title>
+    <link>http://localhost:1313/tags/%E3%82%BF%E3%82%B0a/</link>
+    <description>Recent content in タグA on unbelong</description>
+    <generator>Hugo -- 0.147.4</generator>
     <language>ja</language>
-    <atom:link href="http://localhost:1313/recroom/tags/%E3%82%BF%E3%82%B0a/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Thu, 05 Jun 2025 00:00:00 +0000</lastBuildDate>
+    <atom:link href="http://localhost:1313/tags/%E3%82%BF%E3%82%B0a/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>記事タイトル</title>
+      <link>http://localhost:1313/posts/20250605-title/</link>
+      <pubDate>Thu, 05 Jun 2025 00:00:00 +0000</pubDate>
+      <guid>http://localhost:1313/posts/20250605-title/</guid>
+      <description>&lt;p&gt;ここに本文を記述します。&lt;/p&gt;
+&lt;p&gt;投稿追加手順（毎回やること）&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;_template.md をコピー&lt;/li&gt;
+&lt;li&gt;ファイル名をリネーム（例：20250606-note.md）&lt;/li&gt;
+&lt;li&gt;title / date / slug / tags / 本文を編集&lt;/li&gt;
+&lt;li&gt;GitHub Desktop でコミット＆Push&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;draft: falseしてないと表示されない&lt;/p&gt;</description>
+    </item>
   </channel>
 </rss>
