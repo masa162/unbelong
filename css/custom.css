@@ -1,0 +1,53 @@
+/* ========== Data / Archive accordion ========== */
+.toggle-content{
+  overflow:hidden;
+  max-height:0;
+  transition:max-height .35s ease,opacity .35s ease;
+  opacity:0;
+  margin-left:1rem;          /* インデント */
+  padding:.4rem 0;
+}
+
+.toggle-content.open{
+  max-height:1200px;         /* 十分に大きい値にしておけば OK */
+  opacity:1;
+}
+
+.toggle-btn{
+  background:none;
+  border:0;
+  padding:.25rem 0;
+  font-size:1rem;
+  font-weight:600;
+  display:flex;
+  align-items:center;
+  gap:.45rem;
+  cursor:pointer;
+  user-select:none;
+}
+
+.toggle-btn .icon{
+  transition:transform .25s ease;
+}
+
+.toggle-btn.open .icon{
+  transform:rotate(90deg);   /* ▶ → ▼ */
+}
+
+/* ========== ちょっとしたアクセント ========== */
+.toggle-btn:hover{
+  color:var(--primary);
+}
+
+.toggle-content li{
+  list-style:disc;
+  margin-left:1.2rem;
+  margin-bottom:.25rem;
+}
+
+/* ========== メディアクエリ（任意） ========== */
+@media(max-width:600px){
+  .toggle-content{
+    margin-left:.75rem;
+  }
+}
