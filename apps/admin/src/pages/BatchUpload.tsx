@@ -6,11 +6,14 @@ import { ArrowLeft, Upload, Loader2, CheckCircle2, Copy } from 'lucide-react';
 export default function BatchUpload() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   
+  const CHUNK_SIZE = 20;
+
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [purpose, setPurpose] = useState<'cdn' | 'toon'>('cdn');
   const [files, setFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0 });
   const [resultBatchId, setResultBatchId] = useState<string | null>(null);
   const [markdown, setMarkdown] = useState('');
   const [copied, setCopied] = useState(false);
@@ -37,11 +40,21 @@ export default function BatchUpload() {
       const batchId = batchRes.data.data.batch_id;
       setResultBatchId(batchId);
 
-      // 2. 画像をアップロード
-      // API 側で全ファイルを一気受けする実装になっているので、1回の呼び出し
-      const uploadRes = await batchesApi.upload(batchId, files);
-      if (!uploadRes.data.success) {
-        throw new Error('画像のアップロードに失敗しました');
+      // 2. チャンク処理でアップロード
+      const chunks: File[][] = [];
+      for (let i = 0; i < files.length; i += CHUNK_SIZE) {
+        chunks.push(files.slice(i, i + CHUNK_SIZE));
+      }
+      setUploadProgress({ current: 0, total: files.length });
+
+      let uploaded = 0;
+      for (const chunk of chunks) {
+        const uploadRes = await batchesApi.upload(batchId, chunk);
+        if (!uploadRes.data.success) {
+          throw new Error(`アップロードに失敗しました (${uploaded + 1}枚目付近)`);
+        }
+        uploaded += chunk.length;
+        setUploadProgress({ current: uploaded, total: files.length });
       }
 
       // 3. Markdown を取得
@@ -214,7 +227,7 @@ export default function BatchUpload() {
           className="w-full py-5 bg-primary-500 text-white rounded-2xl font-bold shadow-xl shadow-primary-200 hover:bg-primary-600 transition-all disabled:opacity-50 disabled:shadow-none flex items-center justify-center"
         >
           {uploading ? (
-            <><Loader2 className="animate-spin mr-2" size={24} /> アップロード中...</>
+            <><Loader2 className="animate-spin mr-2" size={24} /> {uploadProgress.total > 0 ? `${uploadProgress.current}/${uploadProgress.total}枚 アップロード中...` : 'アップロード中...'}</>
           ) : (
             `一括アップロードを開始する (${files.length}枚)`
           )}
