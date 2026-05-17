@@ -57,6 +57,9 @@ export default function BatchUpload() {
         setUploadProgress({ current: uploaded, total: files.length });
       }
 
+      // 全チャンク完了後にstkへ1記事として記録
+      await batchesApi.finalize(batchId);
+
       // 3. Markdown を取得
       const mdRes = await batchesApi.getMarkdown(batchId);
       if (mdRes.data.success && mdRes.data.data) {

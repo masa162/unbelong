@@ -541,32 +541,45 @@ app.post('/api/batches/:batchId/upload', async (c) => {
   await db.prepare('UPDATE image_batches SET total_images = ?, updated_at = ? WHERE batch_id = ?')
     .bind(currentSequence - 1, getUnixTimestamp(), batchId).run();
 
-  // stkにService Binding経由で記録
-  if (c.env.STK && uploadedImages.length > 0) {
-    try {
-      const baseUrl = 'https://img.tokyo86.com';
-      const title = (batch.name as string | null) || `画像バッチ ${batchId}`;
-      const urlLines = uploadedImages
-        .map(img => `![](${baseUrl}/${batchId}/${String(img.sequence_number).padStart(3, '0')}.webp)`)
-        .join('\n');
-      const timestamp = new Date().toISOString().slice(0, 16).replace('T', ' ');
-      const content = `${timestamp} アップロード\n\n${urlLines}`;
-
-      const res = await c.env.STK.fetch('https://unified-mcp.belong2jazz.workers.dev/api/articles', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${c.env.STK_API_KEY}`,
-        },
-        body: JSON.stringify({ title, content, tags: ['画像', 'CDN'] }),
-      });
-      console.log('stk service binding:', res.status);
-    } catch (e) {
-      console.error('Failed to notify stk:', e);
-    }
-  }
-
   return c.json({ success: true, data: uploadedImages });
+});
+
+// バッチ完了通知 → stkに1記事として記録
+app.post('/api/batches/:batchId/finalize', async (c) => {
+  const db = c.env.DB;
+  const batchId = c.req.param('batchId');
+
+  const batch = await db.prepare('SELECT * FROM image_batches WHERE batch_id = ?').bind(batchId).first<any>();
+  if (!batch) return c.json({ success: false, error: 'Batch not found' }, 404);
+
+  if (!c.env.STK) return c.json({ success: false, error: 'STK binding not available' }, 500);
+
+  try {
+    const { results: images } = await db.prepare(
+      'SELECT sequence_number FROM images WHERE batch_id = ? ORDER BY sequence_number ASC'
+    ).bind(batchId).all<{ sequence_number: number }>();
+
+    const baseUrl = 'https://img.tokyo86.com';
+    const title = (batch.name as string | null) || `画像バッチ ${batchId}`;
+    const urlLines = images.map(img =>
+      `![](${baseUrl}/${batchId}/${String(img.sequence_number).padStart(3, '0')}.webp)`
+    ).join('\n');
+    const timestamp = new Date().toISOString().slice(0, 16).replace('T', ' ');
+    const content = `${timestamp} アップロード\n\n${urlLines}`;
+
+    const res = await c.env.STK.fetch('https://unified-mcp.belong2jazz.workers.dev/api/articles', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${c.env.STK_API_KEY}`,
+      },
+      body: JSON.stringify({ title, content, tags: ['画像', 'CDN'] }),
+    });
+    const body = await res.json() as any;
+    return c.json({ success: true, articleId: body.articleId });
+  } catch (e: any) {
+    return c.json({ success: false, error: e.message }, 500);
+  }
 });
 
 // Markdown 生成
