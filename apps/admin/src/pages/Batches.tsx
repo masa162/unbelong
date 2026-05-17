@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { batchesApi } from '../lib/api';
-import { Package, Trash2, Copy, Check, Loader2, Plus, Edit2, X, Save } from 'lucide-react';
+import { Package, Trash2, Copy, Check, Loader2, Plus, Edit2, X, Save, Download } from 'lucide-react';
 import { formatDate } from '@tokyo86/shared';
 
 interface Batch {
@@ -49,6 +49,28 @@ export default function Batches() {
     } catch (error) {
       console.error('Failed to delete batch:', error);
       alert('削除に失敗しました');
+    }
+  };
+
+  const downloadOriginals = async (batchId: string, totalImages: number) => {
+    const CF_HASH = 'wdR9enbrkaPsEgUtgFORrw';
+    try {
+      const res = await batchesApi.get(batchId);
+      if (!res.data.success || !res.data.data?.images) return;
+      const images = res.data.data.images;
+      for (const img of images) {
+        const url = `https://imagedelivery.net/${CF_HASH}/${img.id}/original`;
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${batchId}_${String(img.sequence_number).padStart(3, '0')}.webp`;
+        a.target = '_blank';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        await new Promise(r => setTimeout(r, 300));
+      }
+    } catch (error) {
+      console.error('Failed to download originals:', error);
     }
   };
 
@@ -247,6 +269,13 @@ export default function Batches() {
                       ) : (
                         <><Copy size={16} className="mr-2" /> MD 出力</>
                       )}
+                    </button>
+                    <button
+                      onClick={() => downloadOriginals(batch.batch_id, batch.total_images)}
+                      className="p-2.5 bg-white text-green-600 hover:bg-green-50 rounded-xl transition-all shadow-sm border border-transparent hover:border-green-100"
+                      title="オリジナル画像をDL"
+                    >
+                      <Download size={18} />
                     </button>
                     <button
                       onClick={() => startEdit(batch)}
