@@ -326,6 +326,21 @@ const Dashboard = () => {
                     URLをコピー
                   </button>
                   <button
+                    onClick={async (e) => {
+                      e.stopPropagation();
+                      const url = `https://imagedelivery.net/wdR9enbrkaPsEgUtgFORrw/${img.id}/original`;
+                      const blob = await fetch(url).then(r => r.blob());
+                      const a = document.createElement('a');
+                      a.href = URL.createObjectURL(blob);
+                      a.download = `${img.id.substring(0, 6)}.webp`;
+                      a.click();
+                      URL.revokeObjectURL(a.href);
+                    }}
+                    className="w-full py-1.5 text-[10px] bg-green-500/80 hover:bg-green-500 text-white rounded backdrop-blur-md transition-colors font-bold"
+                  >
+                    DL
+                  </button>
+                  <button
                     onClick={(e) => handleDeleteImage(img.id, e)}
                     className="w-full py-1.5 text-[10px] bg-red-500/80 hover:bg-red-500 text-white rounded backdrop-blur-md transition-colors font-bold flex items-center justify-center gap-1"
                   >

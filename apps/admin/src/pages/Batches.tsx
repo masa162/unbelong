@@ -15,6 +15,8 @@ interface Batch {
   updated_at: number;
 }
 
+const PAGE_SIZE = 20;
+
 export default function Batches() {
   const [batches, setBatches] = useState<Batch[]>([]);
   const [loading, setLoading] = useState(true);
@@ -22,6 +24,7 @@ export default function Batches() {
   const [editingBatchId, setEditingBatchId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<{ name: string; description: string; purpose: 'cdn' | 'toon' }>({ name: '', description: '', purpose: 'cdn' });
   const [saving, setSaving] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     fetchBatches();
@@ -149,7 +152,7 @@ export default function Batches() {
 
       {batches.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {batches.map((batch) => (
+          {batches.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE).map((batch) => (
             <div key={batch.id} className="glass rounded-3xl overflow-hidden flex flex-col hover:shadow-xl transition-all group border border-white/50">
               {editingBatchId === batch.batch_id ? (
                 // 編集モード
@@ -299,6 +302,28 @@ export default function Batches() {
             </div>
           ))}
         </div>
+        {/* ページネーション */}
+        {batches.length > PAGE_SIZE && (
+          <div className="flex items-center justify-center gap-2 mt-6">
+            <button
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              className="px-4 py-2 rounded-xl bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-30 shadow-sm text-sm"
+            >
+              ← 前へ
+            </button>
+            <span className="text-sm text-gray-500">
+              {currentPage} / {Math.ceil(batches.length / PAGE_SIZE)}
+            </span>
+            <button
+              onClick={() => setCurrentPage(p => Math.min(Math.ceil(batches.length / PAGE_SIZE), p + 1))}
+              disabled={currentPage === Math.ceil(batches.length / PAGE_SIZE)}
+              className="px-4 py-2 rounded-xl bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-30 shadow-sm text-sm"
+            >
+              次へ →
+            </button>
+          </div>
+        )}
       ) : (
         <div className="flex flex-col items-center justify-center py-24 bg-gray-50 rounded-3xl border-2 border-dashed border-gray-200">
           <Package size={64} className="text-gray-200 mb-4" />
