@@ -60,13 +60,15 @@ export default function Batches() {
       const images = res.data.data.images;
       for (const img of images) {
         const url = `https://imagedelivery.net/${CF_HASH}/${img.id}/original`;
+        const blob = await fetch(url).then(r => r.blob());
+        const objectUrl = URL.createObjectURL(blob);
         const a = document.createElement('a');
-        a.href = url;
+        a.href = objectUrl;
         a.download = `${batchId}_${String(img.sequence_number).padStart(3, '0')}.webp`;
-        a.target = '_blank';
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
+        URL.revokeObjectURL(objectUrl);
         await new Promise(r => setTimeout(r, 300));
       }
     } catch (error) {
