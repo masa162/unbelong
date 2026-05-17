@@ -6,7 +6,7 @@ import { ArrowLeft, Upload, Loader2, CheckCircle2, Copy } from 'lucide-react';
 export default function BatchUpload() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   
-  const CHUNK_SIZE = 20;
+  const CHUNK_SIZE = 5;
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
