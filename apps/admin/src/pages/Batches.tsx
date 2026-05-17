@@ -151,6 +151,7 @@ export default function Batches() {
       </div>
 
       {batches.length > 0 ? (
+        <>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {batches.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE).map((batch) => (
             <div key={batch.id} className="glass rounded-3xl overflow-hidden flex flex-col hover:shadow-xl transition-all group border border-white/50">
@@ -324,6 +325,7 @@ export default function Batches() {
             </button>
           </div>
         )}
+        </>
       ) : (
         <div className="flex flex-col items-center justify-center py-24 bg-gray-50 rounded-3xl border-2 border-dashed border-gray-200">
           <Package size={64} className="text-gray-200 mb-4" />
