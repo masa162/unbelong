@@ -10,7 +10,7 @@ tokyo86プロジェクトの画像CDN・管理システム。Cloudflare Workers 
 
 | コンポーネント | URL | 役割 |
 |---|---|---|
-| tokyo86-api (Worker, env:production) | https://tokyo86-api-production.belong2jazz.workers.dev | バックエンドAPI |
+| tokyo86-api (Worker) | https://tokyo86-api.belong2jazz.workers.dev | バックエンドAPI |
 | tokyo86-admin (Pages) | https://tokyo86-admin.belong2jazz.workers.dev | 管理UI |
 | tokyo86-img-cdn (Worker) | https://img.tokyo86.com | 画像配信 |
 | tokyo86comic (Pages) | https://tokyo86.com | コミックフロント |
@@ -46,7 +46,8 @@ tokyo86プロジェクトの画像CDN・管理システム。Cloudflare Workers 
 - `GET/POST /api/episodes` — エピソード管理
 - `GET/POST /api/illustrations` — イラスト管理
 - `GET/POST /api/batches` — バッチ管理
-- `POST /api/batches/:batchId/upload` — バッチ画像アップロード（完了後stkに自動記録）
+- `POST /api/batches/:batchId/upload` — バッチ画像アップロード（チャンク5枚単位）
+- `POST /api/batches/:batchId/finalize` — バッチ完了通知（stkに1記事として記録）
 - `GET /api/batches/:batchId/markdown` — Markdown生成
 - `POST /api/upload` — 単品アップロード
 - `GET/DELETE /api/images` — 画像一覧・削除
@@ -56,19 +57,13 @@ tokyo86プロジェクトの画像CDN・管理システム。Cloudflare Workers 
 ## デプロイ
 
 ```bash
-# API（productionへ）
-cd apps/api
-npx wrangler deploy src/index.ts --env production
+# API — ルートから実行すること（@tokyo86/sharedの依存解決のため）
+npm run deploy:api
 
 # 管理画面・フロントはGitHub push → Cloudflare Pages自動デプロイ
 ```
 
-ルートからの場合:
-```bash
-npm run deploy:api    # API
-npm run deploy:admin  # 管理画面
-npm run deploy:img-cdn
-```
+**注意**: `apps/api`ディレクトリから直接`wrangler deploy`するとモノレポの依存解決に失敗する。必ずルートから`npm run deploy:api`を使う。
 
 ---
 
@@ -90,16 +85,25 @@ npm run deploy:img-cdn
 
 ---
 
-## stk連携（2026-05-16追加）
+## stk連携（2026-05-16追加、2026-05-17改善）
 
-バッチアップロード完了時にstkのナレッジベースへURL一覧を自動保存。
+バッチアップロード完了時にstkのナレッジベースへURL一覧を自動保存。**1バッチ=1記事**。
 
-- **仕組み**: tokyo86-api → Service Binding → unified-mcp Worker → D1(stuck-db)
+- **仕組み**: フロントでチャンク完了後 → `POST /api/batches/:batchId/finalize` → Service Binding → unified-mcp → D1(stuck-db)
 - **エンドポイント**: `POST /api/articles`（unified-mcp-serverに追加）
-- **Binding設定**: `wrangler.toml` の `[[env.production.services]]` に `STK = unified-mcp`
+- **Binding設定**: `wrangler.toml` の `[[services]]` に `STK = unified-mcp`
 - **認証**: `STK_API_KEY` secret（wrangler secret put で設定済み）
 
 Worker間の直接fetchは `error code: 1042` で失敗するため、Service Bindingが必須。
+
+### チャンクアップロード
+- フロント側で5枚ずつに分割してアップロード（Pixel 8aの5MB写真対応）
+- Cloudflare Workersの100MBリクエスト制限・30秒タイムアウト対策
+- 全チャンク完了後にfinalizeを1回呼ぶことでstkへの重複記録を防止
+
+### Cloudflare Images バリアント
+- `public` — 配信用（AVIF最適化）
+- `original` — 元画像DL用（管理画面のDLボタンから使用）
 
 ---
 
@@ -120,4 +124,5 @@ Worker間の直接fetchは `error code: 1042` で失敗するため、Service Bi
 - 2026-04-05: tokyo86.comドメインへリブランド
 - 2026-04-12: Cloudflareリソース名を`tokyo86`に統一（unbelong-api/db/img-cdn廃止）
 - 2026-04-14: バッチ編集機能追加（後からcdn/toon切り替え可能に）
-- 2026-05-16: stk連携追加（バッチアップ→stk自動記録）
+- 2026-05-16: stk連携追加（バッチアップ→stk自動記録）、Worker環境統合（production廃止）
+- 2026-05-17: チャンクアップロード（5枚単位）、finalizeエンドポイント追加（1バッチ=1stk記事）、originalバリアント追加、管理画面にDLボタン・ページネーション追加
