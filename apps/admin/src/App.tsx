@@ -27,6 +27,35 @@ const Dashboard = () => {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isDeleting, setIsDeleting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [pasteUploading, setPasteUploading] = useState(false);
+
+  useEffect(() => {
+    const handlePaste = async (e: ClipboardEvent) => {
+      const file = Array.from(e.clipboardData?.items || [])
+        .find(item => item.type.startsWith('image/'))
+        ?.getAsFile();
+      if (!file) return;
+
+      setPasteUploading(true);
+      try {
+        const response = await imageApi.upload(file);
+        if (response.data.success && response.data.data) {
+          setLastImageId(response.data.data.id);
+          const imgRes = await imageApi.list();
+          if (imgRes.data.success) setImages(imgRes.data.data || []);
+        }
+      } catch (error: any) {
+        const data = error.response?.data;
+        const details = data?.details ? JSON.stringify(data.details) : (data?.error || error.message);
+        alert(`ペーストアップロードに失敗しました\n\n【詳細】\n${details}`);
+      } finally {
+        setPasteUploading(false);
+      }
+    };
+
+    window.addEventListener('paste', handlePaste);
+    return () => window.removeEventListener('paste', handlePaste);
+  }, []);
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -178,16 +207,17 @@ const Dashboard = () => {
             />
             <button
               onClick={() => fileInputRef.current?.click()}
-              disabled={uploading}
+              disabled={uploading || pasteUploading}
               className="w-full flex items-center justify-center px-6 py-4 bg-primary-500 text-white rounded-2xl shadow-lg shadow-primary-200 hover:bg-primary-600 transition-all font-bold disabled:opacity-50"
             >
-              {uploading ? (
+              {(uploading || pasteUploading) ? (
                 <Loader2 className="animate-spin mr-2" size={20} />
               ) : (
                 <Upload className="mr-2" size={20} />
               )}
-              {uploading ? 'アップロード中...' : '画像を選択してアップロード'}
+              {uploading ? 'アップロード中...' : pasteUploading ? 'ペースト中...' : '画像を選択してアップロード'}
             </button>
+            <p className="text-xs text-gray-400 text-center">または Cmd+V でクリップボードの画像を直接アップロード</p>
           </div>
 
           <div className="flex flex-col items-center justify-center border-2 border-dashed border-gray-100 rounded-3xl p-6 min-h-[300px] bg-gray-50/50">

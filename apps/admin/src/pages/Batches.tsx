@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { batchesApi } from '../lib/api';
-import { Package, Trash2, Copy, Check, Loader2, Plus, Edit2, X, Save, Download } from 'lucide-react';
+import { Package, Trash2, Copy, Check, Loader2, Plus, Edit2, X, Save, Download, Search } from 'lucide-react';
 import { formatDate } from '@tokyo86/shared';
 
 interface Batch {
@@ -25,6 +25,17 @@ export default function Batches() {
   const [editForm, setEditForm] = useState<{ name: string; description: string; purpose: 'cdn' | 'toon' }>({ name: '', description: '', purpose: 'cdn' });
   const [saving, setSaving] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const filteredBatches = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return batches;
+    return batches.filter(b =>
+      b.batch_id.toLowerCase().includes(q) ||
+      (b.name || '').toLowerCase().includes(q) ||
+      (b.description || '').toLowerCase().includes(q)
+    );
+  }, [batches, searchQuery]);
 
   useEffect(() => {
     fetchBatches();
@@ -150,10 +161,22 @@ export default function Batches() {
         </Link>
       </div>
 
-      {batches.length > 0 ? (
+      {/* 検索ボックス */}
+      <div className="relative max-w-sm">
+        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
+          placeholder="バッチID・名前で検索..."
+          className="w-full pl-9 pr-4 py-2.5 text-sm rounded-xl border border-gray-200 bg-white focus:ring-2 focus:ring-primary-500 outline-none"
+        />
+      </div>
+
+      {filteredBatches.length > 0 ? (
         <>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {batches.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE).map((batch) => (
+          {filteredBatches.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE).map((batch) => (
             <div key={batch.id} className="glass rounded-3xl overflow-hidden flex flex-col hover:shadow-xl transition-all group border border-white/50">
               {editingBatchId === batch.batch_id ? (
                 // 編集モード
@@ -304,7 +327,7 @@ export default function Batches() {
           ))}
         </div>
         {/* ページネーション */}
-        {batches.length > PAGE_SIZE && (
+        {filteredBatches.length > PAGE_SIZE && (
           <div className="flex items-center justify-center gap-2 mt-6">
             <button
               onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
@@ -314,11 +337,11 @@ export default function Batches() {
               ← 前へ
             </button>
             <span className="text-sm text-gray-500">
-              {currentPage} / {Math.ceil(batches.length / PAGE_SIZE)}
+              {currentPage} / {Math.ceil(filteredBatches.length / PAGE_SIZE)}
             </span>
             <button
-              onClick={() => setCurrentPage(p => Math.min(Math.ceil(batches.length / PAGE_SIZE), p + 1))}
-              disabled={currentPage === Math.ceil(batches.length / PAGE_SIZE)}
+              onClick={() => setCurrentPage(p => Math.min(Math.ceil(filteredBatches.length / PAGE_SIZE), p + 1))}
+              disabled={currentPage === Math.ceil(filteredBatches.length / PAGE_SIZE)}
               className="px-4 py-2 rounded-xl bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-30 shadow-sm text-sm"
             >
               次へ →
@@ -329,10 +352,16 @@ export default function Batches() {
       ) : (
         <div className="flex flex-col items-center justify-center py-24 bg-gray-50 rounded-3xl border-2 border-dashed border-gray-200">
           <Package size={64} className="text-gray-200 mb-4" />
-          <p className="text-gray-400 font-medium">バッチがまだありません</p>
-          <Link to="/batches/new" className="mt-4 text-primary-500 font-bold hover:underline">
-            最初のバッチを作成する
-          </Link>
+          {searchQuery ? (
+            <p className="text-gray-400 font-medium">「{searchQuery}」に一致するバッチが見つかりません</p>
+          ) : (
+            <>
+              <p className="text-gray-400 font-medium">バッチがまだありません</p>
+              <Link to="/batches/new" className="mt-4 text-primary-500 font-bold hover:underline">
+                最初のバッチを作成する
+              </Link>
+            </>
+          )}
         </div>
       )}
     </div>
