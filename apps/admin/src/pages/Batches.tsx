@@ -250,17 +250,34 @@ export default function Batches() {
                 // 表示モード
                 <>
                   <div className="p-6 flex-1 space-y-4">
-                    <div className="flex items-start justify-between">
-                      <div className="p-3 bg-primary-50 text-primary-500 rounded-2xl">
-                        <Package size={24} />
+                    {/* サムネイルプレビュー */}
+                    {batch.total_images > 0 ? (
+                      <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-gray-100">
+                        <img
+                          src={`https://img.tokyo86.com/${batch.batch_id}/001.webp`}
+                          alt={batch.name || batch.batch_id}
+                          className="w-full h-full object-cover"
+                          onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                        />
+                        <div className="absolute top-2 right-2">
+                          <code className="text-[10px] font-mono font-bold text-white bg-black/50 px-2 py-0.5 rounded backdrop-blur-sm">
+                            {batch.batch_id}
+                          </code>
+                        </div>
                       </div>
-                      <div className="text-right">
-                        <span className="text-[10px] uppercase font-bold text-gray-400 block mb-1">Batch ID</span>
-                        <code className="text-sm font-mono font-bold text-primary-600 bg-primary-50 px-2 py-1 rounded-lg">
-                          {batch.batch_id}
-                        </code>
+                    ) : (
+                      <div className="flex items-start justify-between">
+                        <div className="p-3 bg-primary-50 text-primary-500 rounded-2xl">
+                          <Package size={24} />
+                        </div>
+                        <div className="text-right">
+                          <span className="text-[10px] uppercase font-bold text-gray-400 block mb-1">Batch ID</span>
+                          <code className="text-sm font-mono font-bold text-primary-600 bg-primary-50 px-2 py-1 rounded-lg">
+                            {batch.batch_id}
+                          </code>
+                        </div>
                       </div>
-                    </div>
+                    )}
 
                     <div>
                       <h2 className="text-lg font-bold text-gray-800 line-clamp-1">
