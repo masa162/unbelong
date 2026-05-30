@@ -622,10 +622,43 @@ app.delete('/api/batches/:batchId', async (c) => {
 });
 
 // --- Image API ---
-// 画像一覧取得
+// 画像一覧取得（DB）
 app.get('/api/images', async (c) => {
   const { results } = await c.env.DB.prepare('SELECT * FROM images ORDER BY created_at DESC LIMIT 100').all();
   return c.json({ success: true, data: results });
+});
+
+// CF Images 全件ブラウズ（カーソルページネーション）
+app.get('/api/images/browse', async (c) => {
+  const accountId = c.env.CLOUDFLARE_ACCOUNT_ID;
+  const apiToken = c.env.CLOUDFLARE_IMAGES_API_TOKEN;
+  if (!accountId || !apiToken) return c.json({ success: false, error: 'Cloudflare config missing' }, 500);
+
+  const page = parseInt(c.req.query('page') || '1');
+  const perPage = 100;
+
+  try {
+    const url = `https://api.cloudflare.com/client/v4/accounts/${accountId}/images/v1?per_page=${perPage}&page=${page}`;
+    const res = await fetch(url, { headers: { 'Authorization': `Bearer ${apiToken}` } });
+    const data = await res.json() as any;
+    if (!data.success) return c.json({ success: false, error: data.errors?.[0]?.message || 'CF API error' }, 500);
+
+    const images = (data.result?.images || []).map((img: any) => ({
+      id: img.id,
+      filename: img.filename,
+      uploaded: img.uploaded,
+      variants: img.variants,
+    }));
+
+    return c.json({
+      success: true,
+      images,
+      page,
+      total_count: data.result_info?.total_count,
+    });
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500);
+  }
 });
 
 // 個別画像削除

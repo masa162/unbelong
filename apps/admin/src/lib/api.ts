@@ -50,6 +50,11 @@ export const episodesApi = {
     client.delete<ApiResponse<void>>(`/api/episodes/${id}`),
 };
 
+export const browseApi = {
+  list: (page: number = 1) =>
+    client.get<any>('/api/images/browse', { params: { page } }),
+};
+
 export const imageApi = {
   upload: (file: File) => {
     const formData = new FormData();
