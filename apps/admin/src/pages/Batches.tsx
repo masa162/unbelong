@@ -1,7 +1,7 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { batchesApi } from '../lib/api';
-import { Package, Trash2, Copy, Check, Loader2, Plus, Edit2, X, Save, Download, Search } from 'lucide-react';
+import { Package, Trash2, Copy, Check, Loader2, Plus, Edit2, X, Save, Download, Search, Shuffle, Calendar } from 'lucide-react';
 import { formatDate } from '@tokyo86/shared';
 
 interface Batch {
@@ -26,16 +26,35 @@ export default function Batches() {
   const [saving, setSaving] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+  const [randomBatch, setRandomBatch] = useState<Batch | null>(null);
 
   const filteredBatches = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
-    if (!q) return batches;
-    return batches.filter(b =>
-      b.batch_id.toLowerCase().includes(q) ||
-      (b.name || '').toLowerCase().includes(q) ||
-      (b.description || '').toLowerCase().includes(q)
-    );
-  }, [batches, searchQuery]);
+    return batches.filter(b => {
+      if (q && !(
+        b.batch_id.toLowerCase().includes(q) ||
+        (b.name || '').toLowerCase().includes(q) ||
+        (b.description || '').toLowerCase().includes(q)
+      )) return false;
+      if (dateFrom) {
+        const from = new Date(dateFrom).getTime() / 1000;
+        if (b.created_at < from) return false;
+      }
+      if (dateTo) {
+        const to = new Date(dateTo).getTime() / 1000 + 86400; // 当日末まで
+        if (b.created_at > to) return false;
+      }
+      return true;
+    });
+  }, [batches, searchQuery, dateFrom, dateTo]);
+
+  const pickRandom = useCallback(() => {
+    const pool = batches.filter(b => b.total_images > 0);
+    if (pool.length === 0) return;
+    setRandomBatch(pool[Math.floor(Math.random() * pool.length)]);
+  }, [batches]);
 
   useEffect(() => {
     fetchBatches();
@@ -146,6 +165,44 @@ export default function Batches() {
   }
 
   return (
+    <>
+    {/* ランダムピックアップ モーダル */}
+    {randomBatch && (
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
+        onClick={() => setRandomBatch(null)}
+      >
+        <div
+          className="relative max-w-2xl w-full mx-4"
+          onClick={e => e.stopPropagation()}
+        >
+          <img
+            src={`https://img.tokyo86.com/${randomBatch.batch_id}/001.webp`}
+            alt={randomBatch.name || randomBatch.batch_id}
+            className="w-full rounded-2xl shadow-2xl"
+          />
+          <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/70 to-transparent rounded-b-2xl">
+            <p className="text-white font-bold text-lg">{randomBatch.name || '無題'}</p>
+            <p className="text-white/70 text-sm font-mono">{randomBatch.batch_id} · {formatDate(randomBatch.created_at)}</p>
+          </div>
+          <div className="absolute top-3 right-3 flex gap-2">
+            <button
+              onClick={pickRandom}
+              className="p-2.5 bg-purple-500 text-white rounded-xl hover:bg-purple-600 transition-colors shadow-lg"
+              title="もう一枚"
+            >
+              <Shuffle size={18} />
+            </button>
+            <button
+              onClick={() => setRandomBatch(null)}
+              className="p-2.5 bg-black/50 text-white rounded-xl hover:bg-black/70 transition-colors"
+            >
+              <X size={18} />
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
     <div className="p-6 space-y-8 animate-in fade-in duration-500">
       <div className="flex items-center justify-between">
         <div>
@@ -161,16 +218,54 @@ export default function Batches() {
         </Link>
       </div>
 
-      {/* 検索ボックス */}
-      <div className="relative max-w-sm">
-        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-        <input
-          type="text"
-          value={searchQuery}
-          onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
-          placeholder="バッチID・名前で検索..."
-          className="w-full pl-9 pr-4 py-2.5 text-sm rounded-xl border border-gray-200 bg-white focus:ring-2 focus:ring-primary-500 outline-none"
-        />
+      {/* 検索・フィルター行 */}
+      <div className="flex flex-wrap gap-3 items-center">
+        <div className="relative">
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
+            placeholder="バッチID・名前で検索..."
+            className="pl-9 pr-4 py-2.5 text-sm rounded-xl border border-gray-200 bg-white focus:ring-2 focus:ring-primary-500 outline-none w-56"
+          />
+        </div>
+        <div className="flex items-center gap-2">
+          <Calendar size={16} className="text-gray-400" />
+          <input
+            type="date"
+            value={dateFrom}
+            onChange={(e) => { setDateFrom(e.target.value); setCurrentPage(1); }}
+            className="py-2 px-3 text-sm rounded-xl border border-gray-200 bg-white focus:ring-2 focus:ring-primary-500 outline-none"
+          />
+          <span className="text-gray-400 text-sm">〜</span>
+          <input
+            type="date"
+            value={dateTo}
+            onChange={(e) => { setDateTo(e.target.value); setCurrentPage(1); }}
+            className="py-2 px-3 text-sm rounded-xl border border-gray-200 bg-white focus:ring-2 focus:ring-primary-500 outline-none"
+          />
+          {(dateFrom || dateTo) && (
+            <button
+              onClick={() => { setDateFrom(''); setDateTo(''); }}
+              className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors"
+              title="期間クリア"
+            >
+              <X size={14} />
+            </button>
+          )}
+        </div>
+        <button
+          onClick={pickRandom}
+          className="flex items-center gap-2 px-4 py-2.5 bg-purple-500 text-white text-sm font-bold rounded-xl hover:bg-purple-600 transition-colors shadow-sm"
+          title="ランダムピックアップ"
+        >
+          <Shuffle size={16} />
+          ランダム
+        </button>
+        {(searchQuery || dateFrom || dateTo) && (
+          <span className="text-sm text-gray-500">{filteredBatches.length} 件</span>
+        )}
       </div>
 
       {filteredBatches.length > 0 ? (
@@ -382,5 +477,6 @@ export default function Batches() {
         </div>
       )}
     </div>
+    </>
   );
 }
